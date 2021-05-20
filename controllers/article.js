@@ -1,7 +1,10 @@
 'use strict'
 
 var validator = require('validator');
+var fs = require('fs');
+var path = require('path');
 var Article = require('../models/article');
+const { exists } = require('../models/article');
 
 var controller = {
 
@@ -180,6 +183,110 @@ var controller = {
                 mensage: 'La validacion no es correcta!!!'
             });
         }
+    },
+
+    delete: (req, res) => {
+        // Recoger el id de la url
+        var articleId = req.params.id;
+
+        // Find and delete
+        Article.findOneAndDelete({_id: articleId}, (err, articleRemoved) => {
+            if(err){
+                return res.status(500).send({
+                    status: 'error',
+                    mensage: 'Error al borrar!!!'
+                });
+            }
+
+            if(!articleRemoved){
+                return res.status(404).send({
+                    status: 'error',
+                    mensage: 'No se ha borrado el articulo, posiblemente no existe!!!'
+                });
+            }
+
+            return res.status(200).send({
+                status: 'success',
+                article: articleRemoved
+            });
+        });
+    },
+
+    upload:(req, res) => {
+        // Configurar el modulo del conect multiparty router/article.js (hecho)
+        
+        // Recojer el fichero de la peticion
+        var fileName = 'imagen no subida...';
+
+        if(!req.files){
+            return res.status(404).send({
+                status: 'error',
+                message: fileName
+            });
+        }
+
+        // Conseguir el nombre y la extencion del archivo
+        var filePath = req.files.file0.path;
+        var fileSplit = filePath.split('\\');
+
+        //  *ADVERTENCIA EN LINUX O MAC*
+        // var fileSplit = filePath.split('/');
+
+        // Nombre del archivo
+        var fileName = fileSplit[2];
+
+        // Extencion del fichero
+
+        var extensionSplit = fileName.split('\.');
+        var fileExt = extensionSplit[1];
+
+        // Comprobar la extencion, solo imagenes, si es valida borrar el fichero
+        if(fileExt != 'png' && fileExt != 'jpg' && fileExt != 'jpeg' && fileExt != 'gif'){
+            // Borrar el archivo subido
+            fs.unlink(filePath, (err) => {
+                return res.status(200).send({
+                    status: 'error',
+                    mensage: 'La extencion de la imagen no es valida!!!'
+                });
+            })
+        }else{
+            // Si todo es valido, sacando id de la url 
+            var articleId = req.params.id;
+
+            // Buscar el articulo, asignarle el nombre de la imagen y actualizarlo
+            Article.findOneAndUpdate({_id: articleId}, {image: fileName}, {new:true}, (err, articleUpdated) => {
+                if(err || !articleUpdated){
+                    return res.status(200).send({
+                        status: 'error',
+                        mensage: 'Error al guardar la imagen de articulo!!!'
+                    });
+                }
+
+                return res.status(200).send({
+                    status: 'success',
+                    articleUpdated
+                });
+            });
+        }        
+    },
+
+    getImage: (req, res) => {
+        var file = req.params.image;
+        var filePath = './upload/articles/'+file;
+
+        fs.exists(filePath, (exists) => {
+            if(exists){
+                return res.sendFile(path.resolve(filePath));
+
+            }else{
+                return res.status(200).send({
+                    status: 'error',
+                    message: 'La imagen no existe!!!'
+                });
+            }
+        })
+
+        
     }
 
 };   //end controller
