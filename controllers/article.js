@@ -133,6 +133,55 @@ var controller = {
 
     },
 
+    update: (req, res) => {
+        // Recoger el id del articulo por la url
+        var articleId = req.params.id;
+
+        // Recoger los datos que llegan por put 
+        var params = req.body;
+        
+        // Validar datos 
+        try {
+            var validateTitle = !validator.isEmpty(params.title);
+            var validateContent = !validator.isEmpty(params.content);
+        } catch (error) {
+            return res.status(200).send({
+                status: 'error',
+                mensage: 'Faltan datos por enviar!!!'
+            });
+        }
+
+        if(validateTitle && validateContent){
+            // Find and update
+            Article.findOneAndUpdate({_id: articleId}, params, {new:true}, (err, articleUpdated) => {
+                if(err){
+                    return res.status(500).send({
+                        status: 'error',
+                        mensage: 'Error al actualizar!!!'
+                    });
+                }
+
+                if(!articleUpdated){
+                    return res.status(404).send({
+                        status: 'error',
+                        mensage: 'No existe el articulo!!!'
+                    });
+                }
+
+                return res.status(500).send({
+                    status: 'success',
+                    article: articleUpdated
+                });
+            });
+        }else{
+            // Devolver respuesta
+            return res.status(200).send({
+                status: 'error',
+                mensage: 'La validacion no es correcta!!!'
+            });
+        }
+    }
+
 };   //end controller
 
 module.exports = controller;
